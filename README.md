@@ -35,13 +35,18 @@ Bu kapsamlı araştırma projesi, Amerika Birleşik Devletleri'ndeki iç hat uç
 ### Sonuçlar ve Gelecek Çalışmalar
 
 ## Veri Kaynağı
-**Kaynak:** U.S. Department of Transportation - Bureau of Transportation Statistics (BTS) [https://www.transtats.bts.gov/DL_SelectFields.aspx?gnoyr_VQ=FGJ&QO_fu146_anzr=b0-gvzr]
-**Web Sitesi:** BTS On-Time Performance
+**Kaynak:** U.S. Department of Transportation - Bureau of Transportation Statistics (BTS) 
+
+**Web Sitesi:** BTS On-Time Performance  [https://www.transtats.bts.gov/DL_SelectFields.aspx?gnoyr_VQ=FGJ&QO_fu146_anzr=b0-gvzr]
+
 **Dönem:** 2024 yılı (12 aylık veri)
+
 **Toplam Kayıt:** 7.079.081 uçuş
+
 **Analiz Edilen Kayıt:** 6.965.267 uçuş (eksik veriler temizlendikten sonra)
 
 ## Kullanılan Teknolojiler ve Kütüphaneler
+
 ### R Paketleri
 ```r
 library(tidyverse)   # Veri manipülasyonu
