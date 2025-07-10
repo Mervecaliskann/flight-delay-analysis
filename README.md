@@ -215,5 +215,6 @@ Yazar: Merve Çalışkan
 
 (https://www.linkedin.com/in/mervecaliskann/)
 
-##Lisans
+## Lisans
+
 Bu proje akademik amaçlar için hazırlanmıştır. Kaynak gösterilerek kullanılabilir.
