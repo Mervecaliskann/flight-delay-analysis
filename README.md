@@ -71,60 +71,85 @@ library(bookdown)    # PDF rapor oluşturma
 ## Analiz Metodolojisi
 ### Gecikme Sınıflandırması
 Erken: <-15 dakika önce
+
 Zamanında: ±15 dakika
+
 Gecikmeli: >15 dakika sonra
+
 Not: BTS standardına göre 15 dakika eşik değeri kullanılmıştır.
 
 ## İstatistiksel Testler
 **Ki-kare Bağımsızlık Testi:** Kategorik değişkenler arası ilişki
+
 **ANOVA:** Gruplar arası ortalama farkları
+
 **Tukey HSD:** Çoklu karşılaştırma testleri
 
 ## Temel Bulgular
 ### 📊 Genel İstatistikler
 Uçuşların %79.2'si kabul edilebilir zaman aralığında tamamlanmıştır
+
 %20.8 oranında 15+ dakika gecikme yaşanmıştır
+
 Sadece 2 uçuşta gecikme nedeni kaydedilmemiştir (veri kalitesi yüksek)
 
 ### ✈️ Gecikme Nedenleri Dağılımı
 Geç Gelen Uçak: %40.4 (en büyük neden)
+
 Havayolu Kaynaklı: %34.5
+
 Ulusal Hava Sistemi: %18.9
+
 Hava Durumu: %6.0
+
 Güvenlik: %0.2
 
 ### 🏢 Havalimanı Büyüklüğü Etkisi
 Büyük havalimanları: Daha yüksek gecikme oranı (%21+)
+
 Küçük havalimanları: Daha uzun gecikme süresi (8.4 dk)
 
 ### 🌞 Mevsimsel Bulgular
 Yaz: En yüksek gecikme (13.5 dk) ve iptal oranı (%2.09)
+
 Sonbahar: En düşük gecikme (-0.2 dk)
+
 Temmuz: Yılın en gecikmeli ayı (18.1 dk)
 
 ### 🎉 Tatil Günleri Etkisi
 MLK Günü: %49.1 gecikme oranı (en yüksek)
+
 Şükran Günü: %8 gecikme oranı (en düşük)
+
 Tatil günlerinde iptal oranı %2.18'e yükseliyor
 
 ### 🗺️ En Problemli Rotalar
 Wyoming → Texas: 51.9 dk ortalama gecikme
+
 West Virginia → Florida: 42.1 dk
+
 Puerto Rico ↔ Connecticut: ~30 dk (her iki yönde)
 
 ## Görselleştirmeler (20 Adet)
 Proje, aşağıdaki görselleştirmeleri içermektedir:
 
 Pasta grafikler (gecikme nedenleri)
+
 Çubuk grafikler (mevsimsel karşılaştırmalar)
+
 Isı haritası (kalkış-varış ilişkisi)
+
 Çizgi grafikler (aylık trendler)
+
 Gruplandırılmış grafikler (çoklu faktör analizi)
 
 ## Kurulum ve Çalıştırma
+
 ### Gereksinimler
 R (≥ 4.0.0)
+
 RStudio
+
 LaTeX (PDF çıktısı için)
 
 ### Adımlar
@@ -162,20 +187,27 @@ flight-delay-analysis/
 
 ## Gelecek Çalışmalar
 **Çoklu Regresyon Analizi:** Faktörlerin birlikte etkisinin modellenmesi
+
 **Makine Öğrenimi:** Gecikme tahmin modelleri (Random Forest, XGBoost)
+
 **Gerçek Zamanlı Analiz:** Canlı veri entegrasyonu
+
 **Coğrafi Görselleştirme:** İnteraktif haritalar
 
 ## Kaynaklar
 Bureau of Transportation Statistics (BTS)
+
 Airline On-Time Performance Data
+
 US Federal Holidays 2024
+
 Post-Hoc Testleri
 
 ## İletişim
 Proje hakkında sorularınız için:
 
 Yazar: Merve Çalışkan
+
 (https://www.linkedin.com/in/mervecaliskann/)
 
 ##Lisans
