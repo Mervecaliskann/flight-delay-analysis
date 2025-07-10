@@ -1,0 +1,1555 @@
+
+---
+title: "Havalimanı Büyüklüğü, Mevsimsel Faktörler ve Uçuş Rotası Özelliklerinin Uçuş Gecikmeleri Üzerindeki Etkisinin İncelenmesi ve Bu Faktörler Arasındaki İlişkilerin Analizi"
+output: 
+  bookdown::pdf_document2
+header-includes:
+  - \renewcommand{\tablename}{Tablo}
+  - \renewcommand{\figurename}{Şekil}
+  - \renewcommand{\contentsname}{İçindekiler}
+date: "2024-2025 Bahar Dönemi"
+author: "Merve Çalışkan"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+
+\newpage
+
+# Giriş
+
+
+## Araştırmanın Amacı
+
+Bu araştırma, Amerika Birleşik Devletleri'ndeki iç hat uçuşlarında karşılaşılan gecikmelerin temel nedenlerini ve bu gecikmeleri tetikleyen çeşitli faktörleri kapsamlı bir biçimde ortaya koymayı hedeflemektedir. Çalışma, özellikle havalimanı büyüklüğü, mevsimsel faktörler, uçuş mesafesi, tatil günleri ve hafta içi/hafta sonu ayrımı gibi kritik değişkenlerin uçuş gecikmeleri üzerindeki etkisini derinlemesine incelemeyi amaçlamaktadır.
+
+Bu değişkenlerin her biri, uçuş operasyonlarının dinamiklerini farklı açılardan etkilemektedir:
+
+-  Havalimanı büyüklüğü, daha büyük ve işlek havalimanlarının artan trafik yoğunluğu, daha karmaşık hava sahası yönetimi ve potansiyel olarak daha fazla bağlantılı uçuş nedeniyle gecikmelere daha yatkın olup olmadığını anlamak için kritik bir faktördür.
+
+-  Mevsimsel faktörler, kış aylarındaki olumsuz hava koşulları (kar, buzlanma) veya yaz aylarındaki fırtınalar gibi doğal olayların yanı sıra, mevsimsel talep dalgalanmalarının operasyonel verimliliği nasıl etkilediğini çözümlemeye yardımcı olacaktır.
+
+-  Uçuş mesafesi, kısa mesafeli uçuşlardaki hızlı dönüş sürelerinin veya uzun mesafeli uçuşlardaki daha uzun blok sürelerinin gecikme dinamikleri üzerindeki farklı etkilerini anlamak için önemlidir.
+
+-  Tatil günleri, genellikle artan yolcu hacmi, yoğun hava trafiği ve havayolu sistemleri üzerindeki ek baskı nedeniyle gecikme riskini artırabilir; bu günlerin spesifik etkileri derinlemesine incelenmektedir.
+
+-  Hafta içi/hafta sonu ayrımı ise, iş seyahatlerinin yoğun olduğu hafta içi günlerle eğlence amaçlı seyahatlerin öne çıktığı hafta sonları arasındaki yolcu profili ve trafik yoğunluğu farklarının gecikme paternlerini nasıl etkilediğini ortaya koyacaktır.
+
+## Veri Seti Tanıtımı
+
+Bu araştırmada kullanılan veri seti, Amerika Birleşik Devletleri Ulaştırma Bakanlığı'nın (U.S. Department of Transportation) Bureau of Transportation Statistics (BTS) biriminden alınmıştır. 
+
+Veri setine <https://www.transtats.bts.gov/DL_SelectFields.aspx?gnoyr_VQ=FGJ&QO_fu146_anzr=b0-gvzr> web sitesinden erişilmiştir.
+
+
+## Araştırma Soruları 
+
+
+Havalimanı büyüklüğü uçuş gecikmelerini nasıl etkiler?
+
+
+Hangi mevsimde uçuş gecikmeleri daha fazla yaşanır?
+
+
+Kalkış gecikme kategorileri ile varış gecikme kategorileri arasında istatistiksel olarak anlamlı bir ilişki var mıdır?
+
+
+Uçuş mesafesi gecikme süresini nasıl etkiler?
+
+
+Tatil günleri ve öncesinde gecikme ve iptal oranları nasıl değişir?
+
+
+Hafta içi/hafta sonu bazında gecikme oranları nelerdir?
+
+\newpage
+
+# Veri Okuma ve Ön İşleme
+
+## Kütüphanelerin Yüklenmesi
+
+Gerekli kütüphaneler başarıyla yüklenmiştir. 
+
+Bu kütüphaneler (tidyverse, lubridate, scales, ggplot2, gridExtra, magrittr) veri işleme, görselleştirme ve raporlama süreçlerinde kullanılacaktır.
+
+
+```{r setup, include=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+if(!require("tidyverse")){install.packages("tidyverse", repos = "https://cran.rstudio.com/")}
+library(tidyverse)  
+
+if(!require("lubridate")){install.packages("lubridate", repos = "https://cran.rstudio.com/")}
+library(lubridate)
+
+if(!require("scales")){install.packages("scales", repos = "https://cran.rstudio.com/")}
+library(scales)
+
+if(!require("ggplot2")){install.packages("ggplot2", repos = "https://cran.rstudio.com/")}
+library(ggplot2)
+
+if(!require("gridExtra")){install.packages("gridExtra", repos = "https://cran.rstudio.com/")}
+library(gridExtra)
+
+if(!require("magrittr")){install.packages("magrittr", repos = "https://cran.rstudio.com/")}
+library(magrittr)  
+
+setwd("C:/Users/LENOVO/Desktop")
+```
+
+
+## Veri Okuma ve Birleştirme
+
+Veri seti, 2024 yılının 12 aylık dönemine ait ABD iç hat uçuşlarının kalkış-varış performansını içermektedir. 
+
+Her ay için ayrı CSV dosyası olarak indirilen veriler bind_rows() fonksiyonu ile birleştirilerek kapsamlı bir veri seti oluşturulmuştur. 
+
+Toplam 7.079.081 uçuş kaydı analiz edilmiştir.
+
+```{r, echo=TRUE, warning=FALSE}
+# 12 farklı ayın verilerini okuma
+jan_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/01-T_ONTIME_REPORTING.csv")
+feb_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/02-T_ONTIME_REPORTING.csv")
+mar_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/03-T_ONTIME_REPORTING.csv")
+apr_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/04-T_ONTIME_REPORTING.csv")
+may_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/05-T_ONTIME_REPORTING.csv")
+jun_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/06-T_ONTIME_REPORTING.csv")
+jul_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/07-T_ONTIME_REPORTING.csv")
+aug_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/08-T_ONTIME_REPORTING.csv")
+sep_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/09-T_ONTIME_REPORTING.csv")
+oct_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/10-T_ONTIME_REPORTING.csv")
+nov_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/11-T_ONTIME_REPORTING.csv")
+dec_data <- read.csv("C:/Users/LENOVO/Desktop/eda-sunum/12-T_ONTIME_REPORTING.csv")
+
+```
+
+
+
+```{r, echo=TRUE}
+
+#verileri birlestirme
+all_data <- bind_rows(jan_data, feb_data, mar_data, apr_data, may_data, jun_data,
+                      jul_data, aug_data, sep_data, oct_data, nov_data, dec_data)
+
+
+
+# ilgilendigimiz degiskenleri secme
+selected_data <- all_data %>%
+  select(YEAR, MONTH, FL_DATE, ORIGIN, ORIGIN_CITY_NAME, ORIGIN_STATE_NM,
+         DEST, DEST_CITY_NAME, DEST_STATE_NM, DEP_DELAY, ARR_DELAY,
+         CANCELLED, DISTANCE, CARRIER_DELAY, WEATHER_DELAY,
+         NAS_DELAY, SECURITY_DELAY, LATE_AIRCRAFT_DELAY)
+
+```
+
+
+## Değişkenlerin Adları ve Açıklamaları
+
+**Temel Değişkenler:**
+
+-   YEAR: Yıl (2024)
+
+-   MONTH: Ay (1-12)
+
+-   FL_DATE: Uçuş tarihi
+
+-   ORIGIN: Kalkış havalimanı kodu
+
+-   ORIGIN_CITY_NAME: Kalkış şehri
+
+-   ORIGIN_STATE_NM: kalkış eyaleti
+
+-   DEST: Varış havalimanı kodu
+
+-   DEST_CITY_NAME: Varış şehri
+
+-   DEST_STATE_NM: Varış eyaleti
+
+-   DEP_DELAY: Kalkış gecikmesi (dakika)
+
+-   ARR_DELAY: Varış gecikmesi (dakika)
+
+-   CANCELLED: İptal durumu (0/1)
+
+-   DISTANCE: Uçuş mesafesi (mil)
+
+-   CARRIER_DELAY: Havayolu şirketinden kaynaklanan gecikme (dakika)
+
+-   WEATHER_DELAY: Hava durumu kaynaklı gecikme (dakika)
+
+-   NAS_DELAY: Ulusal Hava Sahası Sistemi kaynaklı gecikme (dakika)
+
+-   SECURITY_DELAY: Güvenlik kaynaklı gecikme (dakika)
+
+-   LATE_AIRCRAFT_DELAY: Geç gelen uçak kaynaklı gecikme (dakika)
+
+
+## Eksik Veri Analizi
+
+Veri setinde kalkış gecikmelerinde %1.31, varış gecikmelerinde %1.61 oranında eksik veri bulunmaktadır. 
+
+Bu düşük oranlar veri kalitesinin iyi olduğunu göstermektedir. 
+
+İlerleyen kısımlarda eksik kayıtlar filtrelenerek çıkarılacaktır.
+
+
+```{r, echo=FALSE}
+# Eksik veri analizi
+missing_data <- selected_data %>%
+  summarise(
+    # Toplam gözlem sayısı
+    total_rows = n(),
+    
+    # DEP_DELAY eksik veri sayısı ve oranı
+    dep_delay_missing = sum(is.na(DEP_DELAY)),
+    dep_delay_missing_percent = round(dep_delay_missing / total_rows * 100, 2),
+    
+    # ARR_DELAY eksik veri sayısı ve oranı
+    arr_delay_missing = sum(is.na(ARR_DELAY)),
+    arr_delay_missing_percent = round(arr_delay_missing / total_rows * 100, 2),
+    
+    # Hem DEP_DELAY hem ARR_DELAY eksik olan kayıt sayısı
+    both_delays_missing = sum(is.na(DEP_DELAY) & is.na(ARR_DELAY))
+  )
+
+# Sonuc
+cat("DEP_DELAY değişkeninde %", missing_data$dep_delay_missing_percent, "eksik veri\n",
+    "ARR_DELAY değişkeninde %", missing_data$arr_delay_missing_percent, "eksik veri\n",
+    "Hem kalkış hem varış gecikmesi eksik olan kayıt sayısı:", missing_data$both_delays_missing, "\n")
+```
+
+
+## Veri Yapısı Kontrolü
+
+str(selected_data) komutu ile veri setinin yapısı incelenmiştir. Bu inceleme sonucunda:
+
+Veri seti 7.079.081 gözlem ve 18 değişkenden oluşmaktadır.
+
+Tarih değişkeni (FL_DATE) karakter tipinde olup dönüştürülmesi gerekmektedir.
+
+Gecikme değişkenleri (DEP_DELAY, ARR_DELAY) ve gecikme nedenleri sayısal değişkenlerdir.
+
+CANCELLED değişkeni 0/1 sayısal değerler olup faktör tipine dönüştürülecektir.
+
+\newpage
+
+```{r, echo=FALSE}
+# Veri yapisinin gosterimi
+str(selected_data)
+
+```
+
+
+## Tarih Dönüşümü
+
+FL_DATE değişkeni uygun tarih formatına dönüştürülmüştür.
+
+
+## İptal Durumu Dönüşümü
+
+CANCELLED değişkeni, uçuşların iptal edilip edilmediğini gösteren sayısal (0/1) bir değer olarak gelmektedir. Analizlerin daha anlaşılır olması ve kategorik bir yapıya kavuşması amacıyla bu değişken, Yes (1 değeri için) ve No (0 değeri için) şeklinde karakter tipine dönüştürülmüş ve faktör olarak tanımlanmıştır. Bu dönüşüm, iptal oranları ve iptal nedenlerinin daha kolay yorumlanmasını sağlayacaktır.
+
+
+## Yeni Değişkenler
+
+Analizleri zenginleştirmek için aşağıdaki değişkenler türetilmiştir:
+
+
+- SEASON: Mevsim (Kış, İlkbahar, Yaz, Sonbahar)
+
+- WEEKDAY_WEEKEND: Hafta içi/Hafta sonu
+
+- DISTANCE_CATEGORY: Mesafe kategorisi (Kısa, Orta, Uzun, Çok Uzun)
+
+- ORIGIN_SIZE: Havalimanı büyüklüğü (Çok Küçük, Küçük, Orta, Büyük)
+
+- DEP_DELAY_CATEGORY: Kalkış gecikme kategorisi
+
+- DELAY_REASON_STATUS: Gecikme nedeni kayıt durumu
+
+
+```{r, echo=F}
+
+clean_data <- selected_data %>%
+  mutate(
+      # tarih donusumu
+    FL_DATE = as.Date(substring(FL_DATE, 1, 10), format = "%m/%d/%Y"),
+
+    
+    # Kategorik degiskenleri donusturme
+    CANCELLED = ifelse(CANCELLED == 1, "Yes", "No") %>% factor(levels = c("No", "Yes")),
+    
+    
+  
+    #  Mevsim 
+    SEASON = case_when(
+      MONTH %in% c(12, 1, 2) ~ "Winter",
+      MONTH %in% c(3, 4, 5) ~ "Spring",
+      MONTH %in% c(6, 7, 8) ~ "Summer",
+      MONTH %in% c(9, 10, 11) ~ "Fall"
+    ) %>% factor(levels = c("Winter", "Spring", "Summer", "Fall")),
+    
+    # Hafta ici/sonu 
+    WEEKDAY_WEEKEND = ifelse(wday(FL_DATE) %in% c(1, 7), "Weekend", "Weekday") %>%
+      factor(levels = c("Weekday", "Weekend")),
+    
+    #  Mesafe kategorisi
+    DISTANCE_CATEGORY = case_when(
+      DISTANCE < 500 ~ "Short (<500 miles)",
+      DISTANCE < 1000 ~ "Medium (500-999 miles)",
+      DISTANCE < 1500 ~ "Long (1000-1499 miles)",
+      TRUE ~ "Very Long (≥1500 miles)"
+    ) %>% factor(levels = c("Short (<500 miles)", "Medium (500-999 miles)", 
+                            "Long (1000-1499 miles)", "Very Long (≥1500 miles)"))
+  )
+
+```
+
+
+## Havalimanı Büyüklük Sınıflandırması
+
+Havalimanları, uçuş sayılarına göre dört kategoriye ayrılmıştır:
+
+**Büyük:** Üst çeyrek (%75 ve üzeri)
+
+**Orta:** 3. çeyrek (%50-75)
+
+**Küçük:** 2. çeyrek (%25-50)
+
+**Çok Küçük:** Alt çeyrek (%25 ve altı)
+
+```{r, echo=TRUE}
+# Havalimanlarini ucus sayilarına gore siniflandirma
+airport_size <- clean_data %>%
+  count(ORIGIN) %>%
+  mutate(
+    AIRPORT_SIZE = case_when(
+      n >= quantile(n, 0.75) ~ "Large",
+      n >= quantile(n, 0.50) ~ "Medium",
+      n >= quantile(n, 0.25) ~ "Small",
+      TRUE ~ "Very Small"
+    ) %>% factor(levels = c("Very Small", "Small", "Medium", "Large"))
+  )
+
+#ana veri setine ekleme
+clean_data %<>% left_join(airport_size, by = "ORIGIN") %>%
+  rename(ORIGIN_SIZE = AIRPORT_SIZE, FLIGHTS_COUNT = n)
+
+
+
+```
+
+
+## Gecikme Sınıflandırması
+
+Veri ön-işleme aşamasında gecikme değerleri eksik olan kayıtlar çıkarılmıştır. Uçuşlar varış zamanlarına göre üç temel kategoriye ayrılmıştır:
+
+**Gecikme Yok/Küçük Gecikme:** 15 dakikadan az gecikme yaşanan uçuşlar.
+
+**Kayıtsız Neden:** 15+ dakika gecikme olup nedeni belirtilmemiş uçuşlar.
+
+**Kayıtlı Neden:** 15+ dakika gecikme olup nedeni kaydedilmiş uçuşlar.
+
+Bu sınıflandırma metodolojisinin seçilme nedeni, ABD Ulaştırma Bakanlığı Bureau of Transportation Statistics (BTS) sisteminin gecikme tanımlamasına dayanmaktadır. BTS'ye göre, bir uçuş planlanan süreden **15 dakikadan az geç geldiğinde "zamanında"** olarak kabul edilmektedir (BTS, 2021). 
+
+Ayrıca, gecikme nedenleri (CARRIER_DELAY, WEATHER_DELAY, NAS_DELAY, SECURITY_DELAY, LATE_AIRCRAFT_DELAY) **yalnızca 15 dakika ve üzeri gecikme yaşanan uçuşlar için** sistem tarafından kaydedilmektedir. Bu nedenle, gecikme nedenlerini analiz edebilmek için 15 dakika eşik değeri kullanılmış ve bu çerçevede temel bir sınıflandırma oluşturulmuştur.
+
+Kaynak: Bureau of Transportation Statistics. (2021). How are flight delays calculated? <https://www.bts.gov/explore-topics-and-geography/topics/airline-time-performance-and-causes-flight-delays>
+
+```{r, echo=F}
+# NA degerleri olmayan kayitlari filtreleme
+filtered_data <- clean_data %>%
+  filter(!is.na(DEP_DELAY) & !is.na(ARR_DELAY))
+
+# Gecikme kategorileri oluşturma
+delay_categorized_data <- filtered_data %>%
+  mutate(
+    # Kalkış gecikme kategorisi
+    DEP_DELAY_CATEGORY = case_when(
+      DEP_DELAY < -15 ~ "Erken (<15 min)",
+      DEP_DELAY >= -15 & DEP_DELAY < 15 ~ "Zamanında (+-15 min)",
+      DEP_DELAY >= 15 ~ "Gecikmeli (>=15 min)"
+    ) %>% factor(levels = c("Erken (<15 min)", "Zamanında (+-15 min)", "Gecikmeli (>=15 min)")),
+    
+    # Varis gecikme kategorisi 
+    ARR_DELAY_CATEGORY = case_when(
+      ARR_DELAY < -15 ~ "Erken (<15 min)",
+      ARR_DELAY >= -15 & ARR_DELAY < 15 ~ "Zamanında (+-15 min)",
+      ARR_DELAY >= 15 ~ "Gecikmeli (>=15 min)"
+    ) %>% factor(levels = c("Erken (<15 min)", "Zamanında (+-15 min)", "Gecikmeli (>=15 min)")),
+    
+    # Gecikme nedeni durumu kayitli mi
+    DELAY_REASON_STATUS = case_when(
+      ARR_DELAY < 15 ~ "Gecikme Yok/Kucuk Gecikme",  
+      ARR_DELAY >= 15 & 
+        (is.na(CARRIER_DELAY) & is.na(WEATHER_DELAY) & 
+           is.na(NAS_DELAY) & is.na(SECURITY_DELAY) & 
+           is.na(LATE_AIRCRAFT_DELAY)) ~ "Kayitsiz Neden",
+      TRUE ~ "Kayitli Neden"
+    ) %>% factor(levels = c("Gecikme Yok/Kucuk Gecikme", "Kayitsiz Neden", "Kayitli Neden"))
+  )
+```
+
+
+\newpage
+
+## Verinin Son Halinin Kontrolü 
+
+
+
+```{r, echo=F}
+
+delay_categorized_data[982:987, ]
+```
+
+
+\newpage
+
+## NA Sayılarını Karşılaştırma
+
+Veri kalitesini sağlamak amacıyla eksik veri analizi yapılmış ve filtreleme işleminin etkinliği değerlendirilmiştir. Filtreleme işlemi öncesinde kalkış gecikmelerinde (**DEP_DELAY) 92.970 adet**, varış gecikmelerinde **(ARR_DELAY) 113.814 adet** eksik veri bulunmaktaydı.
+
+Eksik veri oranının düşük seviyede olması veri kalitesinin genel olarak yüksek olduğunu göstermektedir. Eksik verilerin varlığı, iptal edilen uçuşlar veya teknik nedenlerle veri kaydı yapılamayan durumlardan kaynaklanabilmektedir.
+
+Filtreleme Stratejisi: Gecikme analizlerinin güvenilirliğini sağlamak amacıyla, hem kalkış hem de varış gecikme verisi eksik olan kayıtlar çıkarılmıştır. Bu yaklaşım:
+
+-  Analiz sonuçlarının tutarlılığını garanti etmektedir.
+
+-  Kalkış-varış gecikme ilişkisinin doğru bir şekilde incelenmesini sağlamaktadır.
+
+-  İstatistiksel testlerin geçerliliğini korumaktadır.
+
+Filtreleme sonrasında her iki değişkende de NA değerleri tamamen elimine edilmiş ve temiz bir veri seti elde edilmiştir. Sonuç olarak, 6.965.267 geçerli uçuş kaydı ile analizler yürütülmüştür.
+
+```{r, echo=TRUE}
+# Filtreleme öncesi ve sonrası NA sayılarını karşılaştırma
+na_counts <- data.frame(
+  Değişken = c("DEP_DELAY", "ARR_DELAY"),
+  Filtreleme_Öncesi = c(sum(is.na(clean_data$DEP_DELAY)), 
+                       sum(is.na(clean_data$ARR_DELAY))),
+  Filtreleme_Sonrası = c(sum(is.na(filtered_data$DEP_DELAY)), 
+                        sum(is.na(filtered_data$ARR_DELAY)))
+)
+
+# tablo formati
+knitr::kable(na_counts, 
+             caption = "Filtreleme Öncesi ve Sonrası NA Değerleri", 
+             format = "latex",
+             align = "lrr",
+             col.names = c("Değişken", "Filtreleme Öncesi NA Sayısı", "Filtreleme Sonrası NA Sayısı"),
+             digits = 0)
+```
+
+
+\newpage
+
+# Analiz ve Görselleştirmeler 
+
+## Varış Gecikme Kategorileri Dağılımı  
+
+ABD iç hat uçuşlarının gecikme durumunu analiz etmek için ARR_DELAY değişkeni kullanılmıştır. Bu değişkenin tercih edilme sebebi ise:
+
+-  Gecikme nedenleri (CARRIER_DELAY, WEATHER_DELAY vb.) doğrudan bu değişkenle ilişkilidir.
+
+- **Tüm operasyonel süreci kapsayan bütünsel bir ölçüdür.**
+
+Uçuşların varış performansı üç kategoride incelenmiştir:
+
+-  **Zamanında varış (±15 dk):** 3.804.169 uçuş (%54.6)
+
+-  **Erken varış (<15 dk önce):** 1.711.126 uçuş (%24.6)
+
+-  **Gecikmeli varış (>15 dk sonra):** 1.449.972 uçuş (%20.8)
+
+Sonuç olarak, uçuşların %79.2'si kabul edilebilir bir zaman aralığında (erken veya zamanında) tamamlanmıştır, bu da ABD iç hat uçuşlarında genel olarak olumlu bir operasyonel performans olduğunu göstermektedir.
+
+
+```{r, fig.cap="Varış Gecikme Kategorileri Dağılımı. (\\#fig:varisgecikmekategorileridagilim)", fig.width=6, fig.height=4, warning= FALSE,echo=FALSE}
+
+# Varış gecikme kategorileri dağılımı
+arr_delay_category_counts <- delay_categorized_data %>%
+  count(ARR_DELAY_CATEGORY) %>%
+  rename(COUNT = n)
+
+# Varış gecikme kategorileri
+p3_revised <- ggplot(arr_delay_category_counts, 
+                     aes(x = ARR_DELAY_CATEGORY, y = COUNT, fill = ARR_DELAY_CATEGORY)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = format(COUNT, big.mark = ".", decimal.mark = ",")), 
+            vjust = -0.5, size = 3.5) +
+  labs(
+    subtitle = "ARR_DELAY değişkenine göre gecikme durumları",
+    x = "Varış Gecikme Kategorisi",
+    y = "Ucus Sayısı"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10)
+  ) +
+  scale_y_continuous(labels = comma_format(big.mark = ".", decimal.mark = ",")) +
+  scale_fill_brewer(palette = "Set2")
+
+print(p3_revised)
+```
+
+\newpage
+
+## Gecikme Nedeni Durumu Dağılımı
+
+Analizde 15 dakikadan fazla gecikmeli olup nedeni kaydedilmeyen sadece 2 uçuş tespit edilmiştir, bu da veri kalitesinin yüksek olduğunu gösterir.
+
+Gecikme nedeni dağılımı grafiğinde, farklı büyüklükteki değerleri aynı grafikte gösterebilmek için **logaritmik ölçek** kullanılmıştır. Bu ölçek, milyonlarca uçuş içeren "Gecikme Yok/Küçük Gecikme" kategorisi ile sadece 2 uçuş içeren "Kayıtsız Neden" kategorisi gibi çok farklı büyüklükteki değerleri aynı grafikte daha anlaşılır şekilde göstermeye olanak sağlar. Logaritmik ölçek kullanılmasaydı, küçük değerler grafikte neredeyse görünmez olacak ve büyük değerler ise bilimsel gösterimle (örn. 6e+06) ifade edilecekti.
+
+```{r, fig.cap="Gecikme Nedeni Durumu Dağılımı (Logaritmik Ölçek). (\\#fig:varisgecikmekategorileri)", fig.width=6, fig.height=6.5,warning= FALSE, echo=FALSE}
+# Gecikme nedeni durumu dağılımı
+delay_reason_status_counts <- delay_categorized_data %>%
+  count(DELAY_REASON_STATUS) %>%
+  rename(COUNT = n)
+
+ggplot(delay_reason_status_counts, 
+       aes(x = DELAY_REASON_STATUS, y = COUNT, fill = DELAY_REASON_STATUS)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = format(COUNT, big.mark = ".", decimal.mark = ",")), 
+            vjust = -0.5, size = 3.5) +
+  labs(
+    subtitle = "Gecikme Nedeni Kaydedilmis ve Kaydedilmemis Ucusların Dagilimi",
+    x = "Gecikme Nedeni Durumu",
+    y = "Ucus Sayisi (Logaritmik Olcek)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9)
+  ) +
+  scale_y_continuous(
+    trans = 'log10',
+    breaks = trans_breaks("log10", function(x) 10^x, n=6),
+    labels = trans_format("log10", math_format(10^.x))
+  ) +
+  scale_fill_brewer(palette = "Set1")
+
+
+```
+
+\newpage
+
+## Gecikme Nedenlerinin Dağılımı (Pasta Grafik)
+
+Bu pasta grafiği, 15 dakika veya daha fazla geciken uçuşlarda gecikme nedenlerinin toplam gecikme süresi bazında dağılımını göstermektedir. Kod, gecikme türlerini filtreleyip gruplandırarak toplam ve ortalama gecikme sürelerini hesaplamaktadır.
+
+
+-  Beş gecikme türü (CARRIER_DELAY, WEATHER_DELAY, NAS_DELAY, SECURITY_DELAY, LATE_AIRCRAFT_DELAY) uzun formata dönüştürülmüştür.
+
+-  Her gecikme türü için toplam gecikme dakikası ve yüzdelik oranlar hesaplanmıştır.
+
+-  Sonuçlar pasta grafiği olarak görselleştirilmiş ve yüzdelik değerler eklenmiştir.
+
+Temel Bulgular:
+
+-  Geç Gelen Uçak (%40.4) en büyük gecikme nedenidir, bu da önceki seferlerdeki gecikmelerin zincirleme etkisini gösterir.
+
+-  Havayolu Kaynaklı gecikmeler (%34.5) ikinci sırada yer almaktadır.
+
+-  Ulusal Hava Sistemi kaynaklı gecikmeler (%18.9) üçüncü önemli nedendir.
+
+-  Hava Durumu beklenenden düşük bir oranda (%6.0) gecikmelere sebep olmaktadır.
+
+-  Güvenlik nedenleri (%0.2) en az etkiye sahiptir.
+
+```{r, fig.cap="Gecikme Nedenlerinin Dağılımı. (\\#fig:gecikmedagilimipasta)", fig.width=10, fig.height=6, warning= FALSE,echo=FALSE}
+# 15+ dakika geciken uçuşlarda gecikme nedenlerinin analizi
+geciken_ucuslar <- delay_categorized_data %>%
+  filter(ARR_DELAY >= 15)
+
+gecikme_tipleri <- geciken_ucuslar %>%
+  select(CARRIER_DELAY, WEATHER_DELAY, NAS_DELAY, SECURITY_DELAY, LATE_AIRCRAFT_DELAY) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "GECIKME_TIPI", 
+    values_to = "GECIKME_DAKIKA"
+  ) %>%
+  filter(!is.na(GECIKME_DAKIKA) & GECIKME_DAKIKA > 0) %>%
+  mutate(GECIKME_TIPI = gsub("_DELAY", "", GECIKME_TIPI))
+
+gecikme_dagilimi <- gecikme_tipleri %>%
+  group_by(GECIKME_TIPI) %>%
+  summarise(
+    TOPLAM_DAKIKA = sum(GECIKME_DAKIKA),
+    UCUS_SAYISI = n()
+  ) %>%
+  mutate(
+    YUZDE = TOPLAM_DAKIKA / sum(TOPLAM_DAKIKA) * 100,
+    ORT_GECIKME = TOPLAM_DAKIKA / UCUS_SAYISI
+  )
+
+ggplot(gecikme_dagilimi, 
+       aes(x = "", y = TOPLAM_DAKIKA, fill = GECIKME_TIPI)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  geom_text(aes(label = paste0(round(YUZDE, 1), "%")), 
+            position = position_stack(vjust = 0.5), color = "black", fontface = "bold") +
+  labs(
+    title = "Geciken Ucusların Gecikme Nedenleri",
+    fill = "Gecikme Nedeni"
+  ) +
+  theme_void() +
+  theme(legend.position = "right") +
+  scale_fill_brewer(palette = "Set2", 
+                    labels = c("CARRIER" = "Havayolu Kaynaklı", 
+                               "LATE_AIRCRAFT" = "Gec Gelen Ucak", 
+                               "NAS" = "Ulusal Hava Sistemi", 
+                               "SECURITY" = "Güvenlik", 
+                               "WEATHER" = "Hava Durumu"))
+
+
+
+```
+
+
+\newpage
+
+## Gecikme Nedenlerine Göre Ortalama Gecikme Süresi
+
+Bu çubuk grafiği, farklı gecikme nedenlerinin ortalama gecikme süreleri üzerindeki etkisini göstermektedir. Kod, gecikme tiplerini ortalama gecikme sürelerine göre sıralayarak karşılaştırma yapmaktadır.
+
+-  Veri, GECIKME_TIPI değişkenine göre gruplandırılmıştır.
+
+-  Her gecikme nedeni için ortalama gecikme süresi (ORT_GECIKME) hesaplanmıştır.
+
+-  Sonuçlar çubuk grafiği olarak görselleştirilmiş ve değerler dakika cinsinden eklenmiştir.
+
+Temel Bulgular:
+
+-  Hava Durumu kaynaklı gecikmeler en uzun ortalama süreye (69.7 dakika) sahiptir.
+
+-  Geç Gelen Uçak nedeniyle yaşanan gecikmeler ikinci sırada (56.5 dakika) yer almaktadır.
+
+-  Havayolu Kaynaklı gecikmeler ortalama 45.4 dakika sürmektedir.
+
+-  Ulusal Hava Sistemi (27.0 dakika) ve Güvenlik (24.3 dakika) kaynaklı gecikmeler daha kısa süreli olmaktadır.
+
+Bu analiz, hava durumu kaynaklı gecikmelerin sıklık olarak düşük olsa da (önceki pasta grafiğinde %6.0) gerçekleştiğinde en uzun süren gecikmeler olduğunu göstermektedir. Havayolu şirketleri, özellikle kötü hava koşullarında daha uzun gecikmeler yaşanabileceğini göz önünde bulundurarak yolcuları bilgilendirmeli ve alternatif planlar oluşturmalıdır.
+
+```{r, fig.cap="Gecikme Nedenlerine Göre Ortalama Gecikme Süresi. (\\#fig:gecikmedagilimisure)", fig.width=8, fig.height=5, warning= FALSE, echo=FALSE}
+ggplot(gecikme_dagilimi, 
+       aes(x = reorder(GECIKME_TIPI, -ORT_GECIKME), 
+           y = ORT_GECIKME, fill = GECIKME_TIPI)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.1f dk", ORT_GECIKME)), 
+            vjust = -0.5, color = "black") +
+  labs(
+    title = "Gecikme Nedenlerine Göre Ortalama Gecikme Süresi",
+    x = "Gecikme Nedeni",
+    y = "Ortalama Gecikme (Dakika)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_discrete(labels = c("CARRIER" = "Havayolu Kaynaklı", 
+                              "LATE_AIRCRAFT" = "Gec Gelen Ucak", 
+                              "NAS" = "Ulusal Hava Sistemi", 
+                              "SECURITY" = "Güvenlik", 
+                              "WEATHER" = "Hava Durumu"))
+
+
+```
+
+\newpage
+
+
+## Gecikme Nedenlerinin Mevsimsel Dağılımı
+
+Bu grafik, uçak gecikme nedenlerinin mevsimlere göre dağılımını analiz etmektedir. 
+
+-  Her mevsim için gecikme nedenlerinin ortalaması hesaplanmıştır.
+
+-  Veriler pivot_longer ile yeniden şekillendirilmiştir.
+
+-  Dodged bar chart ile görselleştirilmiştir.
+
+**Geç Gelen Uçak Gecikmeleri:** Yaz aylarında 31.8 dakika ile en yüksek seviyeye ulaşmakta, sonbahar aylarında 23.0 dakika ile en düşük seviyeye inmektedir.
+
+**Havayolu Kaynaklı Gecikmeler:** Yaz aylarında 26.9 dakika ile pik yaparken, diğer mevsimlerde 22.8-24.3 dakika arasında daha stabil seyretmektedir.
+
+**Ulusal Hava Sistemi Gecikmeler:** İlkbahar aylarında 14.8 dakika ile en yüksek, sonbahar aylarında 11.6 dakika ile en düşük değerleri göstermektedir.
+
+**Hava Durumu Gecikmeler:** Kış aylarında 5.8 dakika ile en yüksek, sonbahar aylarında 2.8 dakika ile en düşük seviyede bulunmaktadır.
+
+**Güvenlik Gecikmeler:** Tüm mevsimlerde 0.1-0.2 dakika seviyesinde kalarak ihmal edilebilir düzeyde seyretmektedir.
+
+Yaz ayları en problemli dönem olarak öne çıkmakta, özellikle havayolu kaynaklı ve geç gelen uçak kaynaklı gecikmeler yoğun seyahat sezonunun olumsuz etkilerini yansıtmaktadır.
+
+```{r,fig.cap="Gecikme Nedenlerinin Mevsimsel Dağılımı. (\\#fig:gecikmemevsimseldagilim)",fig.width=10, fig.height=6, warning= FALSE, echo=FALSE}
+gecikme_nedenleri_mevsimsel <- clean_data %>%
+  filter(ARR_DELAY >= 15) %>%
+  select(SEASON, CARRIER_DELAY, WEATHER_DELAY, NAS_DELAY, SECURITY_DELAY, LATE_AIRCRAFT_DELAY) %>%
+  group_by(SEASON) %>%
+  summarise(
+    CARRIER = mean(CARRIER_DELAY, na.rm = TRUE),
+    WEATHER = mean(WEATHER_DELAY, na.rm = TRUE),
+    NAS = mean(NAS_DELAY, na.rm = TRUE),
+    SECURITY = mean(SECURITY_DELAY, na.rm = TRUE),
+    LATE_AIRCRAFT = mean(LATE_AIRCRAFT_DELAY, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(cols = c(CARRIER, WEATHER, NAS, SECURITY, LATE_AIRCRAFT),
+               names_to = "GECIKME_NEDENI", values_to = "ORTALAMA_DAKIKA")
+
+# Gecikme nedenlerinin mevsimsel dagilimi gorsellestirme
+p_mevsimsel_nedenler <- ggplot(gecikme_nedenleri_mevsimsel, 
+                               aes(x = SEASON, y = ORTALAMA_DAKIKA, fill = GECIKME_NEDENI)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = sprintf("%.1f", ORTALAMA_DAKIKA)), 
+            position = position_dodge(width = 0.9), vjust = -0.3, size = 3.7) +
+  labs(
+    title = "Mevsimlere Gore Gecikme Nedenleri",
+    x = "Mevsim",
+    y = "Ortalama Gecikme (dakika)",
+    fill = "Gecikme Nedeni"
+  ) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set2", 
+                    labels = c("CARRIER" = "Havayolu Kaynakli", 
+                               "LATE_AIRCRAFT" = "Gec Gelen Ucak", 
+                               "NAS" = "Ulusal Hava Sistemi", 
+                               "SECURITY" = "Guvenlik", 
+                               "WEATHER" = "Hava Durumu"))
+
+print(p_mevsimsel_nedenler)
+
+```
+
+
+
+\newpage
+
+## Isı Haritası ile Kategoriler Arası Geçişi Gösterme
+
+Bu ısı haritası, uçuşların kalkıştaki gecikme durumlarının varıştaki gecikme durumlarına nasıl dönüştüğünü göstermektedir. Analiz sonuçları şu önemli bulguları ortaya koymaktadır:
+
+**Erken Kalkış → Erken Varış:** Erken kalkan uçuşların %77,2'si erken varış yapmaktadır, bu da havayollarının erken kalkış avantajını genellikle koruduğunu gösterir.
+
+**Zamanında Kalkış → Zamanında Varış:** Zamanında kalkan uçuşların büyük çoğunluğu (%64,1) zamanında varmaktadır, bu da zamanında kalkışın genellikle zamanında varışı sağladığını doğrular.
+
+**Gecikmeli Kalkış → Gecikmeli Varış:** Kalkışta geciken uçuşların %90,5'i varışta da gecikmeli olmaktadır. Bu, kalkıştaki gecikmelerin çoğunlukla telafi edilemediğini gösterir.
+
+**İyileşme Oranları:** Gecikmeli kalkan uçuşların sadece %5,4'ü zamanında varabilmektedir, bu da havayollarının havada gecikmeyi telafi etme kapasitesinin sınırlı olduğunu ortaya koyar.
+
+**Kötüleşme Oranları:** Zamanında kalkan uçuşların %19,2'si varışta gecikmeye düşmektedir, bu da uçuş sırasında ortaya çıkan sorunların (hava koşulları, hava trafik kontrolü, vs.) etkisini gösterir.
+
+Bu analiz, uçuş planlaması ve operasyonel süreçlerde kalkış zamanlamasının kritik önemini vurgulamaktadır. Kalkıştaki bir gecikme, çoğunlukla varışta da gecikmeye yol açmakta ve nadiren telafi edilebilmektedir.
+
+```{r, fig.cap="Isı haritası ile kategoriler arası geçişi gösterme. (\\#fig:isiharitasi)", fig.width=9, fig.height=7, warning= FALSE, echo=FALSE}
+
+delay_comparison <- delay_categorized_data %>%
+  count(DEP_DELAY_CATEGORY, ARR_DELAY_CATEGORY) %>%
+  group_by(DEP_DELAY_CATEGORY) %>%
+  mutate(PERCENTAGE = n / sum(n) * 100) %>%
+  ungroup()
+
+
+# isi haritasi ile kategoriler arasi gecisi gosterdik
+p5_bonus <- ggplot(delay_comparison, 
+                   aes(x = DEP_DELAY_CATEGORY, y = ARR_DELAY_CATEGORY, fill = PERCENTAGE)) +
+  geom_tile() +
+  geom_text(aes(label = sprintf("%.1f%%\n(%s)", PERCENTAGE, format(n, big.mark = "."))), 
+            color = "white", size = 3) +
+  labs(
+    title = "Kalkis ve Varis Gecikme Kategorileri Arasindaki İliski",
+    x = "Kalkis Gecikme Kategorisi",
+    y = "Varis Gecikme Kategorisi",
+    fill = "Yuzde"
+  ) +
+  theme_minimal() +
+  scale_fill_gradient(low = "steelblue", high = "red")
+
+
+print(p5_bonus)
+
+
+```
+
+\newpage
+
+## Kalkış ve Varış Gecikme Kategorilerinin Karşılaştırması
+
+
+**Hipotezler:**
+
+
+H0: Kalkış gecikme kategorisi ile varış gecikme kategorisi arasında ilişki yoktur (bağımsızdır).
+
+H1: Kalkış gecikme kategorisi ile varış gecikme kategorisi arasında ilişki vardır (bağımsız değildir).
+
+**Bulgular:**
+
+Ki-kare bağımsızlık testi, iki kategorik değişken arasındaki ilişkiyi incelemek için kullanılır. Ki-kare test sonucu (X² = 3993736, df = 4, p < 0.001) sıfır hipotezini reddetmemizi sağlamaktadır. Bu sonuç, kalkış ve varış gecikme kategorileri arasında çok güçlü bir ilişki olduğunu kanıtlamaktadır.
+
+Isı haritasında görüldüğü gibi, erken kalkan uçakların %77.2'si erken varış yaparken, gecikmeli kalkan uçakların %80.5'i gecikmeli varış yapmaktadır. Bu bulgu, uçuş planlamasında kalkış zamanlamasının kritik önemini vurgulamaktadır.
+
+
+\tiny
+
+```{r, echo=FALSE, warning=FALSE}
+# veriyi hazirladik ve ki-kare testini yaptik
+delay_table <- table(delay_categorized_data$DEP_DELAY_CATEGORY, 
+                    delay_categorized_data$ARR_DELAY_CATEGORY)
+
+# Ki-kare testi uygulama
+chi_test <- chisq.test(delay_table)
+
+# Test sonuclarını duzenli bir sekilde gosterme
+chi_result <- data.frame(
+  Statistic = round(chi_test$statistic, 2),
+  df = chi_test$parameter,
+  p_value = ifelse(chi_test$p.value < 0.001, "p < 0.001", round(chi_test$p.value, 3)),
+  Conclusion = ifelse(chi_test$p.value < 0.05, 
+                     "Kalkış ve varış gecikme kategorileri arasında anlamlı bir ilişki vardır", 
+                     "Anlamlı bir ilişki bulunamamıştır")
+)
+
+```
+
+\normalsize
+
+\newpage
+
+## Havalimanı Büyüklüğüne Göre Gecikme Analizi
+
+Bu grafik, havalimanı büyüklüğünün ortalama varış gecikmeleri üzerindeki etkisini göstermektedir. Kod, veri setini havalimanı büyüklüğüne göre gruplandırarak her kategori için toplam uçuş sayısı, gecikmeli uçuş yüzdesi ve ortalama gecikme süresini hesaplamaktadır.
+
+-  Veri ORIGIN_SIZE değişkenine göre gruplandırılmıştır.
+
+-  Her grup için ortalama varış gecikmesi (ARR_DELAY) hesaplanmıştır.
+
+-  Sonuçlar çubuk grafiği olarak görselleştirilmiş ve değerler eklenmiştir.
+
+Temel bulgular:
+
+-  Grafik, genel beklentinin aksine, en küçük havalimanlarının (8.4 dakika) en büyük havalimanlarından (7.0 dakika) daha uzun ortalama gecikmeye sahip olduğunu göstermektedir.
+
+-  Küçük havalimanlarının daha yüksek gecikme süreleri, muhtemelen daha sınırlı altyapı, daha az personel ve uçak gecikmeleriyle başa çıkmak için daha az alternatif kaynağa sahip olmalarından kaynaklanmaktadır. Büyük havalimanları, daha fazla tecrübe, daha iyi teknoloji ve gecikmeleri yönetmek için optimize edilmiş süreçlere sahip olabilir, bu da ortalama gecikme sürelerinin azalmasına katkıda bulunabilir.
+
+
+```{r, fig.cap="Havalimanı büyüklüğüne göre gecikme oranları. (\\#fig:havalimanibuyukluguvegecikmeoranlari)", fig.width=8, fig.height=5, warning= FALSE, echo=FALSE}
+
+p5 <- delay_categorized_data %>%
+  group_by(ORIGIN_SIZE) %>%
+  summarise(
+    TOTAL_FLIGHTS = n(),
+    DELAYED_FLIGHTS = sum(ARR_DELAY >= 15, na.rm = TRUE),
+    DELAY_RATE = DELAYED_FLIGHTS / TOTAL_FLIGHTS * 100,
+    AVG_DELAY = mean(ARR_DELAY, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = ORIGIN_SIZE, y = AVG_DELAY, fill = ORIGIN_SIZE)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.1f dk", AVG_DELAY)), vjust = -0.5) +
+  labs(
+    title = "Havalimanı Büyüklüğüne Göre Ortalama Varış Gecikmesi",
+    x = "Havalimanı Büyüklüğü",
+    y = "Ortalama Gecikme (dakika)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set3")
+
+print(p5)
+
+
+```
+
+
+## Havalimanı Büyüklüğü ve Gecikme İlişkisi
+
+**ANOVA ve Tukey HSD Testi**
+
+
+```{r, echo=FALSE}
+# Havalimanı büyüklüğüne göre gecikme analizi
+havaalani_anova <- aov(ARR_DELAY ~ ORIGIN_SIZE, data = filtered_data)
+summary(havaalani_anova)
+# Gruplar arası farkları bulmak için
+TukeyHSD(havaalani_anova)
+
+```
+
+
+Analiz, havalimanı büyüklüğü ile varış gecikmeleri arasında istatistiksel olarak anlamlı bir ilişki olduğunu ortaya koymuştur (p<0.001).
+
+Özellikle, Tukey HSD testi sonuçlarına göre, "Çok Küçük" havalimanlarından kalkan uçuşlar, daha büyük havalimanlarından (Orta ve Büyük) kalkanlara kıyasla ortalama varış gecikmeleri açısından anlamlı düzeyde farklılaşmaktadır. 
+
+Bu bulgu, havalimanı altyapısının ve operasyonel kapasitesinin uçuş performansındaki kritik rolünü vurgulamaktadır.
+
+\newpage
+
+## Aylara ve Havalimanı Büyüklüğüne Göre Gecikme Oranları
+
+```{r,fig.cap="Aylara ve Havalimanı Büyüklüğüne Göre Gecikme Oranları. (\\#fig:aylaravehavalimanibuyuklugunegoredagilim)", fig.width=9, fig.height=7.8, warning= FALSE, echo=FALSE}
+monthly_airport_delay <- clean_data %>%
+  mutate(MONTH_NAME = month(FL_DATE, label = TRUE, abbr = FALSE)) %>%
+  group_by(MONTH_NAME, ORIGIN_SIZE) %>%
+  summarise(
+    DELAY_RATE = mean(ARR_DELAY >= 15, na.rm = TRUE) * 100,
+    .groups = "drop"
+  )
+
+p16 <- ggplot(monthly_airport_delay, 
+              aes(x = MONTH_NAME, y = DELAY_RATE, color = ORIGIN_SIZE, group = ORIGIN_SIZE)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(
+    x = "Aylar",
+    y = "Gecikme Orani (%)",
+    color = "Havaalani Buyuklugu"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_color_brewer(palette = "Set1")
+
+print(p16)
+```
+
+
+-  Büyük havalimanları (mor çizgi) genellikle en yüksek gecikme oranına sahiptir. Havalimanı büyüklüğü arttıkça gecikme yaşayan uçuş oranı artmaktadır.
+
+-  Önceki grafikte küçük havalimanlarının daha uzun ortalama gecikme süresine sahip olduğu görülürken, bu grafikte büyük havalimanlarında gecikme oranının daha yüksek olduğu görülmektedir. 
+
+Sonuç olarak, büyük havalimanlarında daha fazla uçuş gecikiyor olabilir, ancak geciktiğinde daha kısa süre gecikmektedir.
+
+
+
+\newpage
+
+## Havalimanı Büyüklüğüne Göre Gecikme Nedenleri
+
+Grafik, farklı büyüklükteki havalimanlarında gecikme nedenlerinin dağılımını göstermektedir:
+
+-  **Çok Küçük Havalimanları:** Havayolu kaynaklı gecikmeler (%44.5) en yüksek orana sahip, ardından geç gelen uçak (%31.2) geliyor. Hava durumu (%13.0) ve ulusal hava sistemi (%10.7) daha az etkili.
+
+-  **Küçük Havalimanları:** Havayolu kaynaklı sorunlar (%41.2) ve geç gelen uçak (%31.2) yine en yüksek, diğer nedenler benzer oranlarda.
+
+-  **Orta Büyüklükteki Havalimanları:** Geç gelen uçak oranı (%36.9) artıyor, havayolu kaynaklı gecikmeler (%36.6) azalıyor. Ulusal hava sistemi gecikmelerinde (%16.4) artış görülüyor.
+
+-  **Büyük Havalimanları:** Geç gelen uçak (%41.1) en büyük gecikme nedeni haline geliyor, havayolu kaynaklı gecikmeler (%34.0) azalıyor. Ulusal hava sistemi kaynaklı gecikmeler (%19.4) daha belirgin.
+
+Havalimanı büyüklüğü arttıkça, gecikmelerin kaynağı havayolu şirketlerinden ulusal hava sistemi yoğunluğuna ve önceki uçuşların gecikmesine doğru kayıyor. Güvenlik nedeniyle gecikmeler tüm havalimanı kategorilerinde çok düşük oranda.
+
+```{r, fig.cap="Havalimanı Büyüklüğüne Göre Gecikme Nedenleri. (\\#fig:havalimanibuyuklugugecikme)", fig.width=8, fig.height=6, warning= FALSE, echo=FALSE}
+
+airport_delay_types <- delay_categorized_data %>%
+  filter(DELAY_REASON_STATUS == "Kayitli Neden") %>%
+  select(ORIGIN_SIZE, CARRIER_DELAY, WEATHER_DELAY, NAS_DELAY, SECURITY_DELAY, LATE_AIRCRAFT_DELAY) %>%
+  pivot_longer(
+    cols = c(CARRIER_DELAY, WEATHER_DELAY, NAS_DELAY, SECURITY_DELAY, LATE_AIRCRAFT_DELAY),
+    names_to = "DELAY_TYPE",
+    values_to = "DELAY_MINUTES"
+  ) %>%
+  filter(!is.na(DELAY_MINUTES) & DELAY_MINUTES > 0) %>%
+  mutate(DELAY_TYPE = gsub("_DELAY", "", DELAY_TYPE)) %>%
+  group_by(ORIGIN_SIZE, DELAY_TYPE) %>%
+  summarise(
+    TOTAL_MINUTES = sum(DELAY_MINUTES, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(ORIGIN_SIZE) %>%
+  mutate(PERCENTAGE = TOTAL_MINUTES / sum(TOTAL_MINUTES) * 100) %>%
+  ungroup()
+
+ggplot(airport_delay_types, 
+       aes(x = ORIGIN_SIZE, y = PERCENTAGE, fill = DELAY_TYPE)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = sprintf("%.1f%%", PERCENTAGE)), 
+            position = position_stack(vjust = 0.5), 
+            color = "black", size = 3.5) +
+  labs(
+    title = "Havalimanı Büyüklüğüne Göre Gecikme Nedenleri",
+    subtitle = "Gecikme nedenlerinin yüzdesi",
+    x = "Havalimanı Büyüklüğü",
+    y = "Yüzde (%)",
+    fill = "Gecikme Türü"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  scale_fill_brewer(palette = "Set2", 
+                    labels = c("CARRIER" = "Havayolu Kaynaklı", 
+                               "LATE_AIRCRAFT" = "Gec Gelen Ucak", 
+                               "NAS" = "Ulusal Hava Sistemi", 
+                               "SECURITY" = "Güvenlik", 
+                               "WEATHER" = "Hava Durumu"))
+
+```
+
+
+\newpage
+
+
+## Mevsimlere Göre Gecikme Analizi
+
+Analiz kapsamında mevsimlere göre ortalama varış gecikmesi hesaplanmıştır
+
+
+-  `group_by(SEASON)` ve `summarise()` fonksiyonları ile mevsimsel gruplandırma yapılmıştır.
+
+-  Bar chart ile görselleştirilmiştir.
+
+Temel Bulgular:
+
+-  **Yaz Ayları:** 13.5 dakika ile en yüksek ortalama gecikme seviyesine sahiptir, yoğun seyahat sezonunun etkisini yansıtmaktadır.
+
+-  **İlkbahar Ayları:** 8.7 dakika ortalama gecikme ile ikinci sırada yer almaktadır.
+
+-  **Kış Ayları:** 6.1 dakika ile üçüncü sırada bulunmakta, düşük seyahat talebinin olumlu etkisini göstermektedir.
+
+-  **Sonbahar Ayları:** -0.2 dakika ile negatif değer göstermekte, bu durum uçuşların genellikle erken varış sağladığını ifade etmektedir.
+
+Mevsimsel gecikme paterni seyahat yoğunluğu ile doğrudan ilişkilidir; yaz aylarında en yüksek, sonbahar aylarında en düşük gecikme gözlenmektedir.
+
+```{r, fig.cap="Mevsimlere Göre Gecikme Analizi. (\\#fig:mevsimleregoregecikme)",fig.width=8, fig.height=5, warning= FALSE, echo=FALSE}
+
+delay_by_season <- delay_categorized_data %>%
+  group_by(SEASON) %>%
+  summarise(
+    AVG_DELAY = mean(ARR_DELAY, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#  Mevsimlere Göre Ortalama Gecikme Grafiği
+ggplot(delay_by_season, aes(x = SEASON, y = AVG_DELAY, fill = SEASON)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = sprintf("%.1f", AVG_DELAY)),
+            position = position_dodge(width = 1), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Mevsimlere Göre Ortalama Gecikme",
+    x = "Mevsim",
+    y = "Ortalama Gecikme (dakika)"
+  ) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set2")
+```
+
+\newpage
+
+## Mevsimler ve Gecikme İlişkisi
+
+
+```{r,echo=FALSE}
+# ANOVA Testi
+anova_result <- aov(ARR_DELAY ~ SEASON, data = filtered_data)
+summary(anova_result)
+
+# Tukey HSD Çoklu Karşılaştırma Testi
+tukey_result <- TukeyHSD(anova_result)
+print(tukey_result)
+
+```
+
+
+ANOVA Testi Sonuçları
+
+Test Amacı: Bu analiz, farklı mevsimler arasında uçuş gecikmelerinin istatistiksel olarak anlamlı bir fark gösterip göstermediğini test etmektedir.
+
+ANOVA Sonuçları:
+
+- F değeri: 17524 (çok yüksek)
+
+-  p değeri: <2e-16 (0.001'den küçük)
+
+Sonuç: Mevsimler arasında gecikme süreleri açısından istatistiksel olarak çok yüksek derecede anlamlı fark bulunmaktadır.
+
+
+Tukey Çoklu Karşılaştırma Testi
+
+Bu test hangi mevsim çiftleri arasında anlamlı farklar olduğunu göstermektedir:
+
+En Büyük Farklar:
+
+-  Fall-Summer: -13.74 dakika (Sonbahar, yazdan 13.74 dk daha az gecikmeli)
+
+-  Fall-Spring: -8.92 dakika (Sonbahar, ilkbahardan 8.92 dk daha az gecikmeli)
+
+-  Summer-Winter: 7.42 dakika (Yaz, kıştan 7.42 dk daha gecikmeli)
+
+En Küçük Farklar:
+
+-  Spring-Winter: 2.60 dakika (İlkbahar, kıştan sadece 2.60 dk daha gecikmeli)
+
+-  Summer-Spring: 4.83 dakika (Yaz, ilkbahardan 4.83 dk daha gecikmeli)
+
+Tukey testi sonuçlarına göre gecikme açısından mevsimsel sıralama şu şekildedir: Yaz (en gecikmeli) > İlkbahar > Kış > Sonbahar (en az gecikmeli). Sonbahar ayları diğer tüm mevsimlerden istatistiksel olarak anlamlı şekilde daha düşük gecikme oranlarına sahiptir. (diff değerlerinden görebiliriz)
+
+Yaz ve sonbahar arasındaki 13.74 dakikalık fark, mevsimsel planlama açısından kritik bir bulgudur. Bu sonuç, havayolu şirketlerinin yaz aylarında ek operasyonel önlemler alması gerektiğini göstermektedir.
+
+\newpage
+
+
+## Mevsim ve Mesafe Kategorisine Göre Ortalama Gecikme Analizi
+
+Bu çubuk grafiği, uçuş mesafesi ve mevsim faktörlerinin ortalama gecikme süreleri üzerindeki etkisini göstermektedir. Kod, veri setini mesafe kategorilerine ve mevsimlere göre gruplandırarak ortalama gecikme sürelerini hesaplamaktadır.
+
+-  Veri, SEASON (mevsim) ve DISTANCE_CATEGORY (mesafe kategorisi) değişkenlerine göre gruplandırılmıştır.
+
+-  Her grup için ortalama varış gecikmesi (ARR_DELAY) hesaplanmıştır.
+
+-  Sonuçlar yan yana (dodge) çubuk grafikleri olarak görselleştirilmiş ve değerler eklenmiştir.
+
+Temel Bulgular:
+
+-  Yaz mevsimi tüm mesafe kategorilerinde en yüksek gecikme sürelerine sahiptir.
+
+-  Sonbahar mevsimi en düşük gecikme değerlerine sahiptir ve uzun mesafeli uçuşlarda erken varışlar görülmektedir.
+
+-  Uzun mesafeli uçuşlarda (1000-1500 mil) gecikmeler genellikle daha yüksektir.
+
+Bu analiz, havayolu şirketlerinin mevsimsel ve mesafeye bağlı faktörleri göz önünde bulundurarak uçuş programlarını optimize etmelerine yardımcı olabilir. Yolcular için ise, özellikle yaz aylarında ve uzun mesafeli uçuşlarda daha fazla gecikme yaşanabileceği bilgisi seyahat planlaması açısından değerlidir.
+
+```{r, fig.cap="Mevsim ve Mesafe Kategorisine Göre Ortalama Gecikme. (\\#fig:mevsimmesafegecikme)", fig.width=8, fig.height=5,warning= FALSE, echo=FALSE}
+# Mevsim ve mesafe kategorisine göre gecikme
+delay_categorized_data %>%
+  group_by(SEASON, DISTANCE_CATEGORY) %>%
+  summarise(
+    AVG_DELAY = mean(ARR_DELAY, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = DISTANCE_CATEGORY, y = AVG_DELAY, fill = SEASON)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = sprintf("%.1f", AVG_DELAY)), 
+            position = position_dodge(width = 0.9), vjust = -0.5, size = 3) +
+  labs(
+    title = "Mevsim ve Mesafe Kategorisine Göre Ortalama Gecikme",
+    x = "Mesafe Kategorisi",
+    y = "Ortalama Gecikme (dakika)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8)) +
+  scale_fill_brewer(palette = "Set2")
+
+```
+
+\newpage
+
+## Aylık Gecikme Analizi 
+
+```{r, fig.cap="Aylık Gecikme Analizi. (\\#fig:aylikgecikme)",fig.width=10, fig.height=7.3,warning= FALSE, echo=FALSE}
+# Aylara gore ortalama gecikme
+monthly_delay <- clean_data %>%
+  mutate(MONTH_NAME = month(FL_DATE, label = TRUE, abbr = FALSE)) %>%
+  group_by(MONTH_NAME) %>%
+  summarise(
+    AVG_DELAY = mean(ARR_DELAY, na.rm = TRUE),
+    DELAY_RATE = mean(ARR_DELAY >= 15, na.rm = TRUE) * 100,
+    TOTAL_FLIGHTS = n(),
+    .groups = "drop"
+  )
+
+p15 <- ggplot(monthly_delay, aes(x = MONTH_NAME, y = AVG_DELAY, group = 1)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red", size = 3) +
+  geom_text(aes(label = sprintf("%.1f", AVG_DELAY)), vjust = -1, size = 4.6) +
+  labs(
+    x = "Aylar",
+    y = "Ortalama Gecikme (dakika)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(p15)
+
+```
+
+
+
+Temel Bulgular:
+
+ABD iç hat uçuşlarında 2024'te en yüksek gecikmeler Temmuz (18.1 dk) ve Mayıs (14.0 dk) aylarında görülmüştür. Ekim ve Kasım aylarında uçaklar ortalama olarak erken varış yapmaktadır.
+
+Yaz ayları belirgin şekilde daha gecikmeli iken, sonbahar aylarında uçuşlar planlanan süreden önce tamamlanmaktadır. Bu durum yaz sezonundaki yoğun seyahat talebinin havayolu operasyonları üzerindeki olumsuz etkisini net bir şekilde ortaya koymaktadır.
+
+Ocak (10.4 dk) ve Aralık (7.1 dk) aylarında görülen yüksek gecikmeler muhtemelen yılbaşı ve noel tatili dönemindeki yoğun seyahat talebi ve kış hava koşullarından kaynaklanmaktadır. Bu aylardaki tatil sezonu trafiği, havaalanlarında kalabalık ve hava durumu aksaklıkları nedeniyle uçuşların zamanında gerçekleşmesini zorlaştırmaktadır.
+
+Mart ve Nisan aylarındaki kademeli artış ise bahar tatili sezonunun başlangıcını işaret etmektedir.
+
+Haziran ayından itibaren başlayan yükseliş trendi, okul tatillerinin başlaması ve aile seyahatlerinin artması ile ilişkili olabilir.
+
+\newpage
+
+
+## Hafta içi/Hafta sonu Bazında Gecikme Oranları
+
+
+
+```{r, fig.cap="Hafta içi/Hafta sonu Bazında Gecikme Oranları. (\\#fig:haftaicisonugecikme)",fig.width=10, fig.height=6, warning= FALSE, echo=FALSE}
+
+# Hafta içi/sonu gecikme oranları karşılaştırması
+weekday_delay_comparison <- clean_data %>%
+  group_by(WEEKDAY_WEEKEND) %>%
+  summarise(
+    TOTAL_FLIGHTS = n(),
+    DELAYED_FLIGHTS = sum(ARR_DELAY >= 15, na.rm = TRUE),
+    DELAY_RATE = DELAYED_FLIGHTS / TOTAL_FLIGHTS * 100,
+    AVG_DELAY = mean(ARR_DELAY, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Gecikme oranları grafiği
+p_weekday_delay <- ggplot(weekday_delay_comparison,
+                          aes(x = WEEKDAY_WEEKEND, y = DELAY_RATE, fill = WEEKDAY_WEEKEND)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.2f%%", DELAY_RATE)),
+            vjust = -0.5, size = 3.7) +
+  labs(
+    title = "Gün tipine göre geciken ucusların yüzdesi",
+    x = "Gün tipi",
+    y = "Gecikme Oranı (%)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set1")
+
+# Ortalama gecikme grafiği
+p_weekday_avg_delay <- ggplot(weekday_delay_comparison,
+                              aes(x = WEEKDAY_WEEKEND, y = AVG_DELAY, fill = WEEKDAY_WEEKEND)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.1f dk", AVG_DELAY)),
+            vjust = -0.5, size = 3.7) +
+  labs(
+    title = "Gün tipine göre ortalama gecikme süresi",
+    x = "Gün tipi",
+    y = "Ortalama Gecikme (dakika)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set1")
+
+# İki grafik yan yana
+grid.arrange(p_weekday_delay, p_weekday_avg_delay, ncol = 2)
+
+```
+
+
+Analiz kapsamında hafta içi ve hafta sonu günler için gecikme oranları hesaplanmıştır.
+
+-  `group_by(WEEKDAY_WEEKEND)` ile gruplandırma yapılarak toplam uçuş sayısı, geciken uçuş sayısı, gecikme oranı ve ortalama gecikme süreleri hesaplanmıştır. 
+
+-  İki ayrı bar grafiği oluşturularak grid.arrange() fonksiyonu ile yan yana görselleştirilmiştir.
+
+Temel Bulgular: 
+
+-  Gecikme oranlarına bakıldığında, hafta sonu uçuşlarının (%21.21) hafta içi uçuşlara (%20.20) kıyasla hafifçe daha yüksek bir gecikme yüzdesine sahip olduğu gözlemlenmiştir. 
+
+-  Ortalama gecikme süreleri açısından ise, hafta sonları 7.7 dakikalık ortalama ile hafta içi 6.9 dakikaya göre daha uzun gecikmeler yaşandığı görülmektedir.
+
+-  Hafta sonlarının potansiyel olarak artan yolcu ve uçuş trafiği veya operasyonel kapasite sınırları nedeniyle gecikmelere daha yatkın olduğunu göstermektedir. Hafta sonu dönemlerinde özellikle tatil ve eğlence amaçlı seyahatlerin artması, havaalanlarında daha yoğun bir trafik yaratmakta ve bu durum gecikmelere yol açabilmektedir.
+
+Hafta içi ve hafta sonu arasındaki fark görece küçük olup, her iki dönemde de gecikme oranlarının %20'nin üzerinde seyretmesi genel sistem performansının iyileştirilmesi gerekliliğini işaret etmektedir. Hafta sonu gecikmelerinin sadece 0.8 dakika daha uzun olması, operasyonel farklılıkların sınırlı etkisini göstermektedir.
+
+
+
+\newpage
+
+## Mevsim ve Hafta içi/Hafta sonu Bazında İptal Oranları
+
+Şekil \@ref(fig:mevsimhaftaicihaftasonuiptaloranlari)'de görüldüğü üzere, ABD iç hat uçuşlarında havayolu şirketleri tarafından yapılan iptal oranları mevsimler arasında belirgin farklılıklar göstermektedir. En dikkat çekici bulgu, yaz mevsiminde iptal oranının %2.09 ile en yüksek seviyeye ulaşmasıdır. Yaz mevsiminde görülen yüksek iptal oranı, muhtemelen şiddetli yaz fırtınaları, aşırı sıcaklıklar ve yoğun hava trafiğinden kaynaklanan operasyonel zorluklarla ilişkilendirilebilir. Kış mevsimi %1.66 iptal oranıyla ikinci sırada yer almaktadır. Kış aylarında kar yağışı, buzlanma ve görüş mesafesini etkileyen hava koşulları, havayollarını uçuş iptali kararı almaya zorlayabilmektedir. İlkbahar ve sonbahar ise daha ılıman hava koşullarına sahip olduğundan, sırasıyla %0.98 ve %0.70 ile daha düşük iptal oranları sergilemektedir.
+
+Haftanın günlerine göre havayolu iptal oranlarında ise, hafta içi (%1.38) ve hafta sonu (%1.32) arasında çok küçük bir fark bulunmaktadır. Bu veri, havayollarının iptal kararlarında haftanın gününden ziyade hava koşulları, teknik arızalar veya personel sorunları gibi diğer faktörlerin daha belirleyici olduğunu göstermektedir.
+
+Bu bulgular ışığında, yolcuların özellikle yaz ve kış aylarında seyahat planlarında havayolu iptallerini göz önünde bulundurmaları ve alternatif ulaşım planları yapmaları önerilebilir. Havayolu şirketleri için ise, mevsimsel etkileri dikkate alan planlamalar yapmak ve olumsuz hava koşullarına karşı hazırlıklı olma stratejileri geliştirmek, iptal oranlarını düşürmede etkili olabilir.
+
+```{r, fig.cap="Mevsim ve Hafta içi/Hafta sonu Bazında İptal Oranları. (\\#fig:mevsimhaftaicihaftasonuiptaloranlari)", fig.width=10, fig.height=6.5, warning= FALSE, echo=FALSE}
+
+p1 <- clean_data %>%
+  group_by(SEASON) %>%
+  summarise(
+    TOTAL_FLIGHTS = n(),
+    CANCELLED_FLIGHTS = sum(CANCELLED == "Yes"),
+    CANCELLED_RATE = CANCELLED_FLIGHTS / TOTAL_FLIGHTS * 100,
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = SEASON, y = CANCELLED_RATE, fill = SEASON)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.2f%%", CANCELLED_RATE)), 
+            vjust = -0.5, size = 3.7) +
+  labs(
+    title = "Mevsimlere gore iptal edilen ucusların yuzdesi",
+    x = "Mevsim",
+    y = "Iptal Orani (%)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set2")
+
+# Hafta içi/sonu iptal oranlari - sadece yuzde gosterimi
+
+p2 <- clean_data %>%
+  group_by(WEEKDAY_WEEKEND) %>%
+  summarise(
+    TOTAL_FLIGHTS = n(),
+    CANCELLED_FLIGHTS = sum(CANCELLED == "Yes"),
+    CANCELLED_RATE = CANCELLED_FLIGHTS / TOTAL_FLIGHTS * 100,
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = WEEKDAY_WEEKEND, y = CANCELLED_RATE, fill = WEEKDAY_WEEKEND)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = sprintf("%.2f%%", CANCELLED_RATE)), 
+            vjust = -0.5, size = 3.7) +
+  labs(
+    title = "Gun tipine göre iptal edilen ucusların yuzdesi",
+    x = "Gun tipi",
+    y = "Iptal Orani (%)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Set1")
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+
+\newpage 
+
+## Tatil Günleri / Normal Günler Gecikme ve İptal Oranları
+
+Ana veri setine üç yeni sütun eklenmiştir.
+
+
+-  IS_HOLIDAY: Uçuşun tatil gününe denk gelip gelmediğini belirten boolean değer.
+
+-  HOLIDAY_NAME: Eğer tatil günüyse, hangi tatil olduğunu belirten değer.
+
+-  IS_BUSY_TRAVEL_PERIOD: Uçuşun yoğun seyahat dönemine denk gelip gelmediğini belirten boolean değer.
+
+
+Elde edilen verilere göre, gecikme oranları açısından normal günler (%20.23) en yüksek değeri gösterirken, yoğun seyahat günleri (%19.91) ve tatil günleri (%17.96) daha düşük gecikme oranlarına sahiptir. Bu durum, tatil günlerine yönelik özel operasyonel düzenlemelerin gecikmeleri bir miktar azaltabildiğini düşündürmektedir.
+
+
+Öte yandan, iptal oranlarına bakıldığında ise tablo değişmektedir. Tatil günleri (%2.18) açık ara en yüksek iptal oranına sahipken, yoğun seyahat günleri (%1.63) normal günlerden (%1.31) daha fazla iptal riski taşımaktadır. Bu bulgular, normal günlerde yaşanan gecikmelerin daha yaygın olduğunu ancak tatil dönemlerinin, artan yük ve potansiyel dış faktörler nedeniyle, iptaller açısından en kritik ve sorunlu zaman dilimi olduğunu ortaya koymaktadır.
+
+```{r, fig.cap="Tatil Günleri / Normal Günler Gecikme ve İptal Oranları (\\#fig:tatiliptaloranlari)", fig.width=9, fig.height=6.5, warning= FALSE, echo=FALSE}
+
+# 2024 için ABD resmi tatil gunleri ve onemli seyahat donemleri
+holidays_2024 <- tibble(
+  date = as.Date(c(
+    "2024-01-01", # Yeni  Yıl
+    "2024-01-15", # Martin Luther King Jr. Day
+    "2024-02-14", # Sevgililer Günü
+    "2024-02-19", # Presidents' Day
+    "2024-05-27", # Memorial Day
+    "2024-07-04", # Bağımsızlık Günü
+    "2024-09-02", # Labor Day
+    "2024-10-31", # Halloween
+    "2024-11-28", # Şükran Günü
+    "2024-12-25"  # Noel
+    
+  )),
+  holiday_name = c(
+    "New Year's Day", "MLK Day", "Valentine's Day", "Presidents' Day", 
+    "Memorial Day", "Independence Day", "Labor Day", "Halloween", "Thanksgiving", "Christmas Day"
+  )
+)
+
+# Seyahat yogun donemler (tatilden 1-2 gün önce/sonra)
+create_busy_travel_periods <- function(holiday_date, days_before = 2, days_after = 2) {
+  dates <- seq(holiday_date - days_before, holiday_date + days_after, by = "day")
+  return(dates)
+}
+
+# Tum yogun seyahat donemlerini olustur
+busy_travel_dates <- holidays_2024 %>%
+  filter(holiday_name %in% c("MLK Day","Thanksgiving", "Christmas Day", "New Year's Day","Valentine's Day","Independence Day", "Memorial Day", "Labor Day","Halloween")) %>%
+  pull(date) %>%
+  map(~create_busy_travel_periods(.x)) %>%
+  unlist() %>%
+  as.Date(origin = "1970-01-01")
+
+# Verilere tatil ve yogun seyahat ozellikleri ekle
+clean_data <- clean_data %>%
+  mutate(
+    IS_HOLIDAY = FL_DATE %in% holidays_2024$date,
+    HOLIDAY_NAME = ifelse(IS_HOLIDAY, 
+                          holidays_2024$holiday_name[match(FL_DATE, holidays_2024$date)], 
+                          NA),
+    IS_BUSY_TRAVEL_PERIOD = FL_DATE %in% busy_travel_dates
+  )
+
+# Tatil gunleri ve normal gunler karsilastirmasi
+holiday_analysis <- clean_data %>%
+  mutate(DAY_TYPE = ifelse(IS_HOLIDAY, "Tatil Gunu", 
+                          ifelse(IS_BUSY_TRAVEL_PERIOD, "Yogun Seyahat Gunu", "Normal Gun"))) %>%
+  # Faktor seviyelerini acikca tanimlama
+  mutate(DAY_TYPE = factor(DAY_TYPE, levels = c("Yogun Seyahat Gunu", "Tatil Gunu", "Normal Gun"))) %>%
+  group_by(DAY_TYPE) %>%
+  summarise(
+    Total_Flights = n(),
+    Avg_Delay = mean(ARR_DELAY, na.rm = TRUE),
+    Delay_Rate = mean(ARR_DELAY > 15, na.rm = TRUE) * 100,
+    Cancellation_Rate = mean(CANCELLED == "Yes") * 100
+  )
+
+# Veriyi uzun formata donusturme - gecikme ve iptal oranlari icin
+holiday_analysis_long <- holiday_analysis %>%
+  pivot_longer(
+    cols = c(Delay_Rate, Cancellation_Rate),
+    names_to = "Metric",
+    values_to = "Value"
+  ) %>%
+  mutate(Metric = ifelse(Metric == "Delay_Rate", "Gecikme Oranı", "İptal Oranı"))
+
+# Hem gecikme hem iptal oranlarını gosteren gorsellestirme
+ggplot(holiday_analysis_long, aes(x = DAY_TYPE, y = Value, fill = DAY_TYPE)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(round(Value, 2), "%")), vjust = -0.5) +
+  facet_wrap(~Metric, scales = "free_y") +
+  labs(title = "Tatil Günleri / Normal Günler Gecikme ve İptal Oranları",
+       x = "", y = "Oran (%)") +
+  # Bos kategorileri dusurmemek icin
+  scale_x_discrete(drop = FALSE) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+\newpage 
+
+## Tatillere Göre Gecikme Oranları
+
+ABD'deki farklı tatil günleri arasında uçuş gecikme oranları büyük farklılıklar göstermektedir; ırk eşitliği ve sivil haklar lideri Dr. Martin Luther King Jr.'ın anıldığı federal tatil olan MLK Günü %49.1 ile en yüksek gecikme oranına sahipken, Şükran Günü %8 ile en düşük gecikme oranına sahiptir. 
+
+-  MLK Günü (%49.1): Hafta sonuyla birleşen yapısı ve kış koşullarının etkisiyle en yüksek gecikme oranına sahiptir, bu da operasyonel zorlukları net bir şekilde göstermektedir.
+
+-  Memorial Day (%31.2): Bu tatil de yoğunluktan kaynaklanan yüksek gecikmeler sergilemektedir.
+
+-  Şükran Günü (%8): Yoğun bir dönem olmasına rağmen, bu tatildeki düşük gecikme oranı, etkin operasyonel planlamanın önemini vurgulamaktadır. 
+
+Sonuç olarak, tatillerdeki gecikme oranları büyük ölçüde değişmekte; uzun hafta sonları ve mevsimsel koşullar (kış) gecikmeleri artırırken, iyi yönetimle yoğun tatillerde bile gecikmelerin kontrol altına alınabileceği görülmektedir.
+
+```{r, fig.cap="Tatillere Göre Gecikme Oranları (\\#fig:tatilgecikmeoranlari)", fig.width=8, fig.height=6.5, warning= FALSE, echo=FALSE}
+
+holiday_specific_analysis <- clean_data %>%
+  filter(IS_HOLIDAY) %>%
+  group_by(HOLIDAY_NAME) %>%
+  summarise(
+    Total_Flights = n(),
+    Avg_Delay = mean(ARR_DELAY, na.rm = TRUE),
+    Delay_Rate = mean(ARR_DELAY > 15, na.rm = TRUE) * 100,
+    Cancellation_Rate = mean(CANCELLED == "Yes") * 100
+  )
+
+# Tatillere gore gecikme oranlari
+ggplot(holiday_specific_analysis, aes(x = reorder(HOLIDAY_NAME, -Delay_Rate), y = Delay_Rate, fill = HOLIDAY_NAME)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(round(Delay_Rate, 1), "%")), vjust = -0.5) +
+  labs(title = "Tatillere Göre Gecikme Oranları",
+       x = "", y = "Gecikme Oranı (%)") +
+  # Eksen yazıilarini duzenleme
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+\newpage
+
+
+
+
+## Eyaletler Arası Rota Performansı
+
+```{r, fig.cap="Eyaletler Arası Rota Performansı. (\\#fig:eyaletlerarasirotaperformansi)",fig.width=13, fig.height=7, warning= FALSE, echo=FALSE}
+
+eyalet_rota <- clean_data %>%
+  group_by(ORIGIN_STATE_NM, DEST_STATE_NM) %>%
+  summarise(
+    UCUS_SAYISI = n(),
+    ORTALAMA_GECIKME = mean(ARR_DELAY, na.rm = TRUE),
+    GECIKME_ORANI = mean(ARR_DELAY > 15, na.rm = TRUE) * 100, 
+    .groups = "drop"
+  ) %>%
+  filter(UCUS_SAYISI >= 500, ORIGIN_STATE_NM != DEST_STATE_NM) %>%
+  arrange(desc(ORTALAMA_GECIKME)) 
+
+# En sorunlu 10 eyaletler arası rota 
+p_eyalet_rota <- ggplot(head(eyalet_rota, 10),
+                        aes(x = reorder(paste(ORIGIN_STATE_NM, "→", DEST_STATE_NM), ORTALAMA_GECIKME),
+                            y = ORTALAMA_GECIKME)) + 
+  geom_bar(stat = "identity", fill = "#3182bd") + 
+  
+  geom_text(aes(label = sprintf("%.1f", ORTALAMA_GECIKME)), 
+            hjust = -0.05, vjust = 0.5, size = 3.4, color = "black") +
+  
+  coord_flip() + # Yatay bar grafiği için
+  labs(
+    title = "En Yüksek Gecikmeye Sahip Eyaletler Arası Rotalar",
+    x = "Rota (Kalkış → Varış)",
+    y = "Ortalama Gecikme (dakika)"
+   
+  ) +
+  theme_minimal() + 
+ 
+  theme(
+    axis.text.y = element_text(color = "black", size = 10, face = "bold"), # Eyalet isimleri siyah, kalın 
+    plot.margin = unit(c(0.5, 1, 0.5, 0.5), "cm"), 
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5) 
+  )
+
+
+print(p_eyalet_rota)
+```
+
+
+Ortalama gecikmeye göre sıralanmış ilk 10 eyalet arası rotanın performansı bu grafikte gösterilmektedir.
+
+-  En Yüksek Ortalama Gecikme Süresine Sahip Rota: Wyoming'den Texas'a olan rota, 51.9 dakikalık ortalama gecikme ile listedeki en yüksek gecikmeye sahip rotadır. Bu durum, bu rotada operasyonel veya çevresel faktörlerden kaynaklanan ciddi aksaklıkların yaşandığını düşündürmektedir.
+
+-  Öne Çıkan Güney Rotası: İkinci sırada West Virginia'dan Florida'ya olan rota 42.1 dakikalık ortalama gecikme ile yer almaktadır. Bu, özellikle güneye doğru olan rotaların, iklim koşulları veya yoğun trafik nedeniyle yüksek gecikme potansiyeline sahip olabileceğine işaret edebilir.
+
+-  Karşılıklı Etkileşim: Puerto Rico ile Connecticut arasındaki rotaların her iki yönde de (Puerto Rico -> Connecticut 30.0 dakika ve Connecticut -> Puerto Rico 28.7 dakika) ilk 10 içinde yer alması, bu eyaletler arasındaki bağlantının sistemik gecikme sorunlarına sahip olduğunu göstermektedir. Bu durum, havaalanı kapasitesi, hava trafik kontrolü veya genel operasyonel koordinasyon eksikliklerine işaret edebilir.
+
+-  Coğrafi Etkileşim ve Uzun Mesafelerin Rolü: Grafikteki rotaların çoğunun coğrafi olarak birbirinden uzak eyaletleri (örn. Wyoming-Texas, U.S. Virgin Islands-North Carolina) veya ada bölgelerini içermesi, uzun mesafeli uçuşların ve denizaşırı bağlantıların hava trafiği yönetimi ve hava koşullarından daha fazla etkilendiğini ve dolayısıyla daha yüksek gecikme riskleri taşıdığını düşündürmektedir.
+
+
+\newpage
+
+# Sonuçlar 
+
+**Kalkış-Varış İlişkisi:** Kalkış gecikmeleri ile varış gecikmeleri arasında son derece güçlü ve doğrudan bir ilişki bulunmaktadır; erken kalkışlar erken varışla, gecikmeli kalkışlar ise gecikmeli varışla sonuçlanmaktadır.
+
+**Havalimanı Büyüklüğü:**  Büyük havalimanlarındaki yoğunluk ve karmaşıklık gecikme oranını artırırken, sınırlı kaynaklara sahip küçük havalimanlarında yaşanan aksaklıklar gecikme sürelerinin uzamasına yol açabilmektedir.
+
+**Mevsimsel Etki:** Yaz mevsimi, diğer tüm mevsimlerden önemli ölçüde daha yüksek ortalama uçuş gecikmelerine sahiptir.
+
+**Hafta Sonu Etkisi:** Hafta sonu uçuşları, hem gecikme oranı (%21.21'e karşı %20.20) hem de ortalama gecikme süresi (7.7 dakikaya karşı 6.9 dakika) açısından hafta içi uçuşlardan daha yüksek değerler sergilemektedir.
+
+**Rota Bazında Gecikmeler:** Belirli eyaletler arası rotalar (örn. Wyoming'den Texas'a), diğer rotalara göre belirgin şekilde daha yüksek ortalama gecikmelere sahiptir. Uzun mesafeli uçuşların ve denizaşırı bağlantıların hava trafiği yönetimi ve hava koşullarından daha fazla etkilendiğini ve dolayısıyla daha yüksek gecikme riskleri taşıdığını düşündürmektedir.
+
+**Tatil Günleri Etkisi:** Tatil günleri, uçuş gecikmeleri üzerinde önemli bir etkiye sahiptir; MLK Günü %49.1 ile en yüksek gecikme oranına sahipken, Şükran Günü %8 ile en düşük gecikme oranına sahiptir.
+
+**Uçuş Mesafesi Kategorisi:** Uzun mesafeli uçuşlarda (1000-1500 mil) gecikmeler genellikle daha yüksek olup, özellikle Sonbahar mevsiminde uzun mesafeli uçuşlarda erken varışlar gözlemlenmiştir.
+
+
+# Gelecek Çalışmalar
+
+
+Çoklu Regresyon: Gecikmeleri etkileyen faktörlerin (havalimanı büyüklüğü, mevsim, gün tipi, tatil günleri vb.) birlikteki etkilerini ve bireysel katkılarını belirlemek için çoklu doğrusal regresyon analizi yapılabilir.
+
+Gecikme Tahmini: Uçuş gecikmelerini tahmin etmek amacıyla makine öğrenimi modelleri (örn. karar ağaçları, rastgele ormanlar) geliştirilebilir.
+
+Gerçek zamanlı veri entegrasyonu ile dinamik gecikme tahmin sistemleri geliştirilebilir.
+
+
+# Kaynaklar
+
+<https://www.transtats.bts.gov/DL_SelectFields.aspx?gnoyr_VQ=FGJ&QO_fu146_anzr=b0-gvzr>
+
+<https://www.timeanddate.com/holidays/us/2024>
+
+<https://www.bts.gov/explore-topics-and-geography/topics/airline-time-performance-and-causes-flight-delays#q2>
+
+<https://istatistikturkiye.com/post-hoc-testlerinin-dogru-kullanimi/>
+
+Ders Notları
